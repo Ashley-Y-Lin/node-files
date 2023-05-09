@@ -14,7 +14,7 @@ async function cat(path) {
     console.log(err.message);
     process.exit(1);
   }
-  console.log(contents);
+  return contents;
 }
 
 /** Take as input a string (URL), reads and prints first 80 characters */
@@ -27,13 +27,35 @@ async function webCat(url) {
     console.log(err.message);
     process.exit(1);
   }
-  console.log(resp.data.slice(0, 80), "...");
+  return resp.data.slice(0, 80);
 }
 
-filePath = argv[2];
-
-if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-  webCat(filePath);
-} else {
-  cat(filePath);
+async function writeOutput(path, content) {
+  try {
+    await fsP.writeFile(path, content, "utf8");
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
 }
+
+async function catOrWebCat(filePath) {
+  if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+    return await webCat(filePath);
+  } else {
+    return await cat(filePath);
+  }
+}
+
+async function printContent() {
+  if (argv[2] === "--out") {
+    const outfilePath = `./${argv[3]}`;
+    const filePath = argv[4];
+    const content = await catOrWebCat(filePath);
+    writeOutput(outfilePath, content);
+  } else {
+    console.log(await catOrWebCat(argv[2]));
+  }
+}
+
+printContent();
